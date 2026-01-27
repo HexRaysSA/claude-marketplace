@@ -1,8 +1,0 @@
-[project]
-name = "ida-plugin-skill"
-version = "1.0.0"
-description = "Claude skill for creating IDA Pro plugins"
-requires-python = ">=3.9"
-
-[tool.uv]
-dev-dependencies = []

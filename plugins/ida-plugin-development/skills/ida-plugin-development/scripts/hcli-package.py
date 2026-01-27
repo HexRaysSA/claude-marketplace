@@ -78,7 +78,7 @@ def run_lint(zip_path: Path) -> bool:
     """Run hcli plugin lint on the ZIP archive."""
     try:
         result = subprocess.run(
-            ["hcli", "plugin", "lint", str(zip_path)],
+            ["uv", "run", "--with=ida-hcli", "hcli", "plugin", "lint", str(zip_path)],
             capture_output=True,
             text=True,
             timeout=60
@@ -102,7 +102,7 @@ def install_plugin(zip_path: Path) -> bool:
     """Install the plugin using hcli."""
     try:
         result = subprocess.run(
-            ["hcli", "plugin", "install", str(zip_path)],
+            ["uv", "run", "--with=ida-hcli", "hcli", "plugin", "install", str(zip_path)],
             capture_output=True,
             text=True,
             timeout=120

@@ -1,9 +1,0 @@
-{
-  "name": "ida-domain",
-  "description": "Write and execute Python scripts using the IDA Domain API for reverse engineering",
-  "version": "1.0.0",
-  "author": {
-    "name": "HexRaysSA",
-    "email": "support@hex-rays.com"
-  }
-}
