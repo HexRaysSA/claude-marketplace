@@ -2,7 +2,7 @@
 
 Develop plugins for IDA Pro in Python, using idiomatic patterns, lessons, and tricks, including the Python Domain API (ida-domain). Use when creating both GUI (Qt) and background plugins for inspecting and rendering things program structure, functions, disassembly, cross-references, and strings.
 
-A [Claude Skill](https://docs.claude.com/en/docs/claude-code/skills) that enables Claude to autonomously create, package, and install IDAPython plugins with proper HCLI-compatible packaging.
+[Claude Skills](https://docs.claude.com/en/docs/claude-code/skills) that enables Claude to autonomously create, package, and install IDAPython plugins with proper HCLI-compatible packaging.
 
 Claude handles plugin infrastructure (Qt widgets, menus, actions, hooks, settings) so you can focus on what your plugin should do.
 
