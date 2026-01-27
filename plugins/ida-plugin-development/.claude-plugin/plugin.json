@@ -1,7 +1,6 @@
 {
   "name": "ida-plugin-development",
   "description": "Skills, knowledge, and scripts for developing plugins for IDA Pro in Python, using idiomatic patterns, lessons, and tricks.",
-  "category": "reverse-engineering",
   "version": "2.0.0",
   "author": {
     "name": "HexRaysSA",

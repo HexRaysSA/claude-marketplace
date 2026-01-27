@@ -1,7 +1,6 @@
 {
   "name": "reverse-engineering-with-code-eval-and-ida-domain",
   "description": "(Unsafe) Skills, knowledge, and scripts for reverse engineering with IDA Pro. Autonomously writes and executes IDA Domain scripts to analyze binaries, extract functions, decompile code, and automate any reverse engineering task.",
-  "category": "reverse-engineering",
   "version": "2.0.0",
   "author": {
     "name": "HexRaysSA",
