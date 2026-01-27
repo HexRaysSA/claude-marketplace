@@ -2,21 +2,16 @@
 
 Claude Code plugins and skills for IDA Pro reverse engineering workflows. These plugins enable Claude to autonomously create IDA Pro plugins and execute binary analysis scripts.
 
-## Plugins
-
-### ida-plugin-development
+## [ida-plugin-development](plugins/ida-plugin-development/README.md)
 
 Develop plugins for IDA Pro in Python, using idiomatic patterns, lessons, and tricks.
 
-See [plugins/ida-plugin-development/README.md](plugins/ida-plugin-development/README.md) for detailed documentation.
 
-### (unsafe) reverse-engineering-with-code-eval-and-ida-domain
-
-(Unsafe) Skills, knowledge, and scripts for reverse engineering with IDA Pro. Autonomously writes and executes IDA Domain scripts to analyze binaries, extract functions, decompile code, and automate any reverse engineering task.
+## (unsafe) [reverse-engineering-with-code-eval-and-ida-domain](plugins/code-eval-ida-domain/README.md)
 
 > warning: this plugin generates and evaluates code on the current system, so it should only be used in a sandboxed environment.
 
-See [plugins/code-eval-ida-domain/](plugins/code-eval-ida-domain/) for detailed documentation.
+(Unsafe) Skills, knowledge, and scripts for reverse engineering with IDA Pro. Autonomously writes and executes IDA Domain scripts to analyze binaries, extract functions, decompile code, and automate any reverse engineering task.
 
 ## Installation
 
