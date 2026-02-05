@@ -16,6 +16,7 @@ Key concepts covered in this document:
 - [Plugin Manager Integration](#plugin-manager-integration) - packaging and distribution
 - [Plugin Entry Point](#plugin-entry-point) - version checking and conditional loading
 - [Hook Registration](#hook-registration) - pairwise register/unregister pattern
+- [Cross-Plugin Communication via IDC Functions](#cross-plugin-communication-via-idc-functions) - invoke plugin functionality from scripts/other plugins
 - [Save/Load state from netnodes](#saveload-state-from-netnodes) - persist plugin data in IDB
 - [Respond to current address and selection change](#respond-to-current-address-and-selection-change) - UI location hooks
 - [Find widgets by prefix](#find-widgets-by-prefix) - managing multiple widget instances
@@ -422,6 +423,78 @@ class oplog_plugmod_t(ida_idaapi.plugmod_t):
         self.unregister_idb_hooks()
         ...
 ```
+
+
+## Cross-Plugin Communication via IDC Functions
+
+Python plugins can import shared libraries, and two plugins may even have the same dependencies. One plugin can import code from another plugin's module. However, to invoke functionality on a specific *instance* of a running plugin (accessing its state, calling methods that depend on instance data), you need a different mechanism.
+
+Use `ida_expr.add_idc_func` to register a callable with a well-known name, and `idc.eval_idc` to invoke it from scripts or other plugins.
+
+Key constraints:
+- The function name must be globally unique - only one plugin should register a given name
+- There's only a single provider for that name (no multiple instances registering the same name)
+- The registering plugin must unregister the function during `term()`
+
+```python
+import ida_expr
+
+class foo_plugmod_t(ida_idaapi.plugmod_t):
+    def __init__(self):
+        self.data: list[str] = []
+        self.init()
+
+    def register_idc_func(self):
+        data = self.data
+
+        def foo_get_data(index: int) -> str:
+            if 0 <= index < len(data):
+                return data[index]
+            return ""
+
+        def foo_add_data(value: str) -> int:
+            data.append(value)
+            return len(data)
+
+        if ida_expr.add_idc_func("foo_get_data", foo_get_data, (ida_expr.VT_LONG,)):
+            logger.debug("registered foo_get_data IDC function")
+        else:
+            logger.warning("failed to register foo_get_data IDC function")
+
+        if ida_expr.add_idc_func("foo_add_data", foo_add_data, (ida_expr.VT_STR,)):
+            logger.debug("registered foo_add_data IDC function")
+        else:
+            logger.warning("failed to register foo_add_data IDC function")
+
+    def unregister_idc_func(self):
+        ida_expr.del_idc_func("foo_get_data")
+        ida_expr.del_idc_func("foo_add_data")
+
+    def init(self):
+        self.register_idc_func()
+
+    def term(self):
+        self.unregister_idc_func()
+```
+
+Callers invoke the function via `idc.eval_idc`:
+
+```python
+import idc
+
+idc.eval_idc('foo_add_data("hello")')
+result = idc.eval_idc('foo_get_data(0)')
+```
+
+Parameter types for `add_idc_func`:
+- `ida_expr.VT_STR` - string parameter
+- `ida_expr.VT_LONG` - integer parameter
+- `ida_expr.VT_FLOAT` - floating point parameter
+
+This pattern is useful for:
+- Exporting plugin data to external scripts (headless testing, automation)
+- Allowing one plugin to trigger actions in another
+- Providing a stable API for plugin functionality that doesn't depend on Python imports
 
 
 ## Save/Load state from netnodes

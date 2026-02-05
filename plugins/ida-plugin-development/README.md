@@ -28,9 +28,15 @@ Claude handles plugin infrastructure (Qt widgets, menus, actions, hooks, setting
 - HCLI packaging and validation
 
 **Out of Scope:**
-- IDA scripting/analysis logic (use ida-domain-skill for that)
+- IDA scripting/analysis logic (use `reverse-engineering-with-code-eval-and-ida-domain` plugin for script execution)
 - IDA 7.x/8.x compatibility
 - C++ SDK plugins
+
+## Skills
+
+- **ida-plugin-development** - Plugin infrastructure, Qt widgets, actions, hooks, settings
+- **ida-domain-api** - Domain API reference for IDA Pro binary analysis
+- **package-ida-plugin** - HCLI packaging and distribution
 
 ## Related
 
