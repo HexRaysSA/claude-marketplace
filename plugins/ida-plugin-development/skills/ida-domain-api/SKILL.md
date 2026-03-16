@@ -31,11 +31,160 @@ Available API modules: `bytes`, `comments`, `database`, `entries`, `flowchart`, 
 from ida_domain import Database
 from ida_domain.database import IdaCommandOptions
 
-ida_options = IdaCommandOptions(auto_analysis=True, new_database=False)
-with Database.open("path/to/binary", ida_options, save_on_close=True) as db:
-    # Your analysis here
+# Open an existing .i64/.idb
+ida_options = IdaCommandOptions(auto_analysis=False, new_database=False)
+with Database.open("path/to/sample.i64", ida_options, save_on_close=False) as db:
+    pass
+
+# Analyze a raw input file and create a new database
+ida_options = IdaCommandOptions(
+    auto_analysis=True,
+    new_database=True,
+    output_database="path/to/cache/sample.i64",
+    load_resources=True,
+)
+with Database.open("path/to/input.exe", ida_options, save_on_close=True) as db:
     pass
 ```
+
+### Commonly Used IdaCommandOptions
+
+`IdaCommandOptions` maps directly to IDA command-line switches. Two options are especially common for headless analysis tools:
+
+**`load_resources=True`** (maps to `-R`): loads MS Windows exe resources. Important for PE analysis that needs resource data.
+
+**`plugin_options`** (maps to `-O`): pass options to IDA plugins. The most common use is **disabling Lumina** to prevent it from injecting bad or non-deterministic names:
+
+```python
+ida_options = IdaCommandOptions(
+    auto_analysis=True,
+    new_database=True,
+    output_database=str(cache_path),
+    load_resources=True,
+    plugin_options="lumina:host=0.0.0.0 -Osecondary_lumina:host=0.0.0.0",
+)
+```
+
+This sets both primary and secondary Lumina server addresses to `0.0.0.0`, effectively disabling Lumina lookups. The `plugin_options` field is a raw string; `build_args()` emits `-O{value}` verbatim, so embedding `-O` inside the value for additional plugin options works correctly — the above produces `-Olumina:host=0.0.0.0 -Osecondary_lumina:host=0.0.0.0`.
+
+Other useful fields: `processor` (`-p`), `log_file` (`-L`), `script_file` (`-S`), `db_compression` (`-P`). See the `IdaCommandOptions` docstring for the full list.
+
+### Transparent Database Cache for Headless Tools
+
+For repeatable CLI tools, do not re-analyze raw binaries every run. Prefer this pattern:
+- if the input is already an `.i64` or `.idb`, use it directly
+- otherwise hash the raw input and use the SHA-256 as the cache key
+- create `<cache>/<sha256>.i64` on demand
+- serialize access with a lock file and an extra `.nam` check, because another IDA process may have the database unpacked
+- create the cached database with `save_on_close=True`
+- reopen cached databases read-only with `save_on_close=False`
+- after requesting auto-analysis, call `ida_auto.auto_wait()` before querying
+
+```python
+import contextlib
+import fcntl
+import hashlib
+import os
+import time
+from pathlib import Path
+
+import ida_auto
+from ida_domain import Database
+from ida_domain.database import IdaCommandOptions
+
+DATABASE_POLL_INTERVAL = 0.25
+DATABASE_ACCESS_TIMEOUT = 5.0
+DATABASE_ANALYSIS_TIMEOUT = 120.0
+
+
+def get_cache_dir() -> Path:
+    root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return root / "your-tool"
+
+
+def compute_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def wait_for_repack(db_path: Path, timeout: float) -> None:
+    nam_path = db_path.with_suffix(".nam")
+    deadline = time.monotonic() + timeout
+    while nam_path.exists():
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"database appears busy: {db_path}")
+        time.sleep(DATABASE_POLL_INTERVAL)
+
+
+@contextlib.contextmanager
+def database_access_guard(db_path: Path, timeout: float):
+    wait_for_repack(db_path, timeout)
+    lock_path = Path(str(db_path) + ".lock")
+    lock_fd = lock_path.open("w")
+    deadline = time.monotonic() + timeout
+    try:
+        while True:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f"timed out waiting for lock: {db_path}")
+                time.sleep(DATABASE_POLL_INTERVAL)
+
+        wait_for_repack(db_path, max(0.0, deadline - time.monotonic()))
+        yield
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
+
+
+def resolve_database(file_path: Path) -> Path:
+    if file_path.suffix.lower() in {".i64", ".idb"}:
+        return file_path
+
+    cache_dir = get_cache_dir()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{compute_sha256(file_path)}.i64"
+    if cache_path.exists():
+        return cache_path
+
+    with database_access_guard(cache_path, DATABASE_ANALYSIS_TIMEOUT):
+        if cache_path.exists():
+            return cache_path
+
+        ida_options = IdaCommandOptions(
+            auto_analysis=True,
+            new_database=True,
+            output_database=str(cache_path),
+            load_resources=True,
+        )
+        with Database.open(str(file_path), ida_options, save_on_close=True):
+            ida_auto.auto_wait()
+
+        if not cache_path.exists():
+            raise RuntimeError(f"analysis did not create {cache_path}")
+        return cache_path
+
+
+@contextlib.contextmanager
+def open_database_session(db_path: Path, auto_analysis: bool = False):
+    with database_access_guard(db_path, DATABASE_ACCESS_TIMEOUT):
+        ida_options = IdaCommandOptions(auto_analysis=auto_analysis, new_database=False)
+        with Database.open(str(db_path), ida_options, save_on_close=False) as db:
+            if auto_analysis:
+                ida_auto.auto_wait()
+            yield db
+```
+
+Notes:
+- keep cached database creation quiet in normal mode; only log cache paths in verbose/debug mode
+- if you need a different cache policy, keep the same three-phase guard: wait for `.nam`, acquire `flock`, re-check `.nam`
+- if you must fall back to `idapro.open_database(...)` for options not exposed by `ida-domain`, import your local project modules before `import idapro`, because `idapro` can mutate `sys.path`
+- disable Lumina via `plugin_options="lumina:host=0.0.0.0 -Osecondary_lumina:host=0.0.0.0"` in `IdaCommandOptions` (see "Commonly Used IdaCommandOptions" above); no need to fall back to `idapro.open_database()` for this
 
 ### Key Database Properties
 
@@ -72,6 +221,8 @@ for func in db.functions:
 # Get function count
 count = len(db.functions)
 ```
+
+If your report needs thunk functions or library functions, iterate `db.functions` directly and classify them by flags. Do not assume a higher-level wrapper already included them.
 
 ### Finding Functions
 
@@ -134,6 +285,47 @@ for chunk in db.functions.get_chunks(func):
 for data_ea in db.functions.get_data_items(func):
     print(f"Data at {data_ea:#x}")
 ```
+
+### Thunk-Aware Analysis
+
+If your tool renders callers/callees, API usage, or function summaries, resolve thunks once and reuse the result everywhere. A good default is:
+- check `FunctionFlags.THUNK`
+- follow only single-target thunk chains
+- stop on cycles, zero-target chains, or multi-target chains
+- cap the depth so malformed databases cannot loop forever
+
+```python
+from ida_domain.functions import FunctionFlags
+
+MAX_THUNK_DEPTH = 5
+
+
+def resolve_thunk(db, func):
+    current = func
+    seen = set()
+
+    for _ in range(MAX_THUNK_DEPTH):
+        if not (db.functions.get_flags(current) & FunctionFlags.THUNK):
+            return current
+
+        if current.start_ea in seen:
+            return current
+        seen.add(current.start_ea)
+
+        callees = list(db.functions.get_callees(current))
+        if len(callees) != 1:
+            return current
+
+        current = callees[0]
+
+    return current
+```
+
+Use the resolved target consistently for:
+- caller lists
+- callee lists
+- API/import classification
+- attaching per-function metadata like matches or tags
 
 ### Local Variables
 
