@@ -15,6 +15,13 @@
     {
       "name": "reverse-engineering-with-code-eval-and-ida-domain",
       "source": "./plugins/code-eval-ida-domain"
+    },
+    {
+      "name": "ida-codemode-mcp",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/HexRaysSA/ida-codemode-mcp.git"
+      }
     }
   ]
 }
