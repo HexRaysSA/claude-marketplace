@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "ida-claude-plugins",
+  "name": "HexRaysSA",
   "version": "2.0.0",
   "description": "Plugins for working with Hex-Rays IDA Pro for reverse engineering and plugin develop",
   "owner": {
