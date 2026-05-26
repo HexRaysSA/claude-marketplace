@@ -13,8 +13,9 @@ Claude handles plugin infrastructure (Qt widgets, menus, actions, hooks, setting
 ## Installation
 
 ```bash
-/plugin marketplace add HexRaysSA/ida-claude-plugins
-/plugin install ida-plugin-development@ida-claude-plugins
+
+claude plugin marketplace add HexRaysSA/claude-marketplace
+claude plugin install ida-plugin-development@HexRaysSA
 ```
 
 ## Scope
@@ -43,8 +44,3 @@ Claude handles plugin infrastructure (Qt widgets, menus, actions, hooks, setting
 - [HCLI Documentation](https://hcli.docs.hex-rays.com/)
 - [IDAPython Documentation](https://python.docs.hex-rays.com/)
 - [ida-domain Documentation](https://ida-domain.docs.hex-rays.com/)
-
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.

@@ -11,10 +11,6 @@ Provides:
 ## Installation
 
 ```bash
-/plugin marketplace add HexRaysSA/ida-claude-plugins
-/plugin install reverse-engineering-with-code-eval-and-ida-domain@ida-claude-plugins
+claude plugin marketplace add HexRaysSA/claude-marketplace
+claude plugin install reverse-engineering-with-code-eval-and-ida-domain@HexRaysSA
 ```
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
