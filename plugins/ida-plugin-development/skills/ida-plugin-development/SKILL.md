@@ -363,7 +363,7 @@ class foo_plugmod_t(ida_idaapi.plugmod_t):
         # do things here that users invoke via the menu entry (edit > plugins > ...)
         ...
 
-    def term(self):
+    def __del__(self):
         # cleanup resources, unhook handlers, etc.
         ...
 
@@ -382,7 +382,7 @@ class foo_plugin_t(ida_idaapi.plugin_t):
 ## Hook Registration
 
 Create pairwise helper functions for registering/unregistering hooks,
-and call these from `init`/`term`
+and call these from `init`/`__del__`
 
 ```python
 class oplog_plugmod_t(ida_idaapi.plugmod_t):
@@ -417,7 +417,7 @@ class oplog_plugmod_t(ida_idaapi.plugmod_t):
     def run(self, arg):
         ...
 
-    def term(self):
+    def __del__(self):
         # cleanup in reverse order
         self.unregister_location_hooks()
         self.unregister_idb_hooks()
@@ -434,7 +434,7 @@ Use `ida_expr.add_idc_func` to register a callable with a well-known name, and `
 Key constraints:
 - The function name must be globally unique - only one plugin should register a given name
 - There's only a single provider for that name (no multiple instances registering the same name)
-- The registering plugin must unregister the function during `term()`
+- The registering plugin must unregister the function during `__del__()`
 
 ```python
 import ida_expr
@@ -473,7 +473,7 @@ class foo_plugmod_t(ida_idaapi.plugmod_t):
     def init(self):
         self.register_idc_func()
 
-    def term(self):
+    def __del__(self):
         self.unregister_idc_func()
 ```
 
@@ -859,7 +859,7 @@ class foo_plugmod_t(ida_idaapi.plugmod_t):
     def run(self, arg):
         self.create_viewer()
 
-    def term(self):
+    def __del__(self):
         ...
         self.unregister_open_action()
 ```
@@ -903,7 +903,7 @@ class FooPrefixPluginMod(ida_idaapi.plugmod_t):
         # we need to re-render all the lines.
         refresh_disassembly()
 
-    def term(self):
+    def __del__(self):
         # gc will clean up prefixer and uninstall it (during plugin termination)
         self.prefixer = None
 
@@ -960,7 +960,7 @@ class FooHintsPluginMod(ida_idaapi.plugmod_t):
         self.hinter = FooHints(self.notes)
         self.hinter.hook()
 
-    def term(self):
+    def __del__(self):
         if self.hinter is not None:
             self.hinter.unhook()
 
@@ -1033,7 +1033,7 @@ class ColoringPluginMod(ida_idaapi.plugmod_t):
         self.hooks = ColorHooks()
         self.hooks.hook()
 
-    def term(self):
+    def __del__(self):
         if self.hooks is not None:
             self.hooks.unhook()
 
