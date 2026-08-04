@@ -17,10 +17,10 @@
       "source": "./plugins/code-eval-ida-domain"
     },
     {
-      "name": "ida-codemode-mcp",
+      "name": "ida-mcp",
       "source": {
         "source": "url",
-        "url": "https://github.com/HexRaysSA/ida-codemode-mcp.git"
+        "url": "https://github.com/HexRaysSA/ida-codemode.git"
       }
     }
   ]
